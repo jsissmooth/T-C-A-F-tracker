@@ -1,0 +1,175 @@
+{
+  "date": "2026-06-16",
+  "holdings": [
+    {
+      "name": "10.80%",
+      "ticker": "N/A",
+      "identifier": "13.95%",
+      "pct_of_fund": null,
+      "quantity": null,
+      "market_value": null,
+      "investments": "",
+      "options_strike": ""
+    },
+    {
+      "name": "10.67%",
+      "ticker": "N/A",
+      "identifier": "13.93%",
+      "pct_of_fund": null,
+      "quantity": null,
+      "market_value": null,
+      "investments": "",
+      "options_strike": ""
+    },
+    {
+      "name": "17.80%",
+      "ticker": "12.06%",
+      "identifier": "17.00%",
+      "pct_of_fund": 18.32,
+      "quantity": null,
+      "market_value": null,
+      "investments": "",
+      "options_strike": ""
+    },
+    {
+      "name": "-7.13%",
+      "ticker": "N/A",
+      "identifier": "-3.07%",
+      "pct_of_fund": null,
+      "quantity": null,
+      "market_value": null,
+      "investments": "",
+      "options_strike": ""
+    },
+    {
+      "name": "6.09",
+      "ticker": "023135106",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 435436948.5,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "1,769,925"
+    },
+    {
+      "name": "5.70",
+      "ticker": "67066G104",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 407520315.3,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "1,918,194"
+    },
+    {
+      "name": "5.57",
+      "ticker": "594918104",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 398574711.6,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "997,035"
+    },
+    {
+      "name": "4.87",
+      "ticker": "037833100",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 348768957.68,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "1,176,604"
+    },
+    {
+      "name": "4.56",
+      "ticker": "02079K305",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 326063288.05,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "882,803"
+    },
+    {
+      "name": "4.45",
+      "ticker": "30303M102",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 318519529.04,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "536,698"
+    },
+    {
+      "name": "3.32",
+      "ticker": "11135F101",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 237289759.0,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "602,350"
+    },
+    {
+      "name": "3.00",
+      "ticker": "15189T107",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 214637837.55,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "4,983,465"
+    },
+    {
+      "name": "2.56",
+      "ticker": "49271V100",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 182945352.87,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "5,758,431"
+    },
+    {
+      "name": "2.53",
+      "ticker": "007903107",
+      "identifier": "LT",
+      "pct_of_fund": null,
+      "quantity": 180872713.56,
+      "market_value": null,
+      "investments": "$0.00",
+      "options_strike": "330,506"
+    },
+    {
+      "name": "2.29",
+      "ticker": "N/A",
+      "identifier": "N/A",
+      "pct_of_fund": 6.37,
+      "quantity": null,
+      "market_value": null,
+      "investments": "N/A",
+      "options_strike": "$1,412,651.71"
+    },
+    {
+      "name": "Days traded at premium",
+      "ticker": "29",
+      "identifier": "N/A",
+      "pct_of_fund": 141.0,
+      "quantity": null,
+      "market_value": null,
+      "investments": "N/A",
+      "options_strike": "N/A"
+    },
+    {
+      "name": "Days traded at discount",
+      "ticker": "22",
+      "identifier": "N/A",
+      "pct_of_fund": 67.0,
+      "quantity": null,
+      "market_value": null,
+      "investments": "N/A",
+      "options_strike": "N/A"
+    }
+  ]
+}
