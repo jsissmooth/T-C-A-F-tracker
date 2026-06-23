@@ -19,12 +19,29 @@ def scrape_holdings():
     records = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(user_agent=(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        ))
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+            ]
+        )
+        context = browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            viewport={"width": 1920, "height": 1080},
+            locale="en-US",
+        )
+
+        # hide webdriver property
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        """)
+
         page = context.new_page()
 
         print("Opening page...", file=sys.stderr)
@@ -35,10 +52,14 @@ def scrape_holdings():
         print("Clicking Holdings tab...", file=sys.stderr)
         try:
             page.click("a[href='#holdings']", timeout=10000)
-            page.wait_for_timeout(10000)
+            page.wait_for_timeout(5000)
             print("Holdings tab clicked.", file=sys.stderr)
         except Exception as e:
             print("Holdings tab error: {}".format(e), file=sys.stderr)
+
+        # scroll down to holdings section to trigger lazy loading
+        page.evaluate("window.scrollBy(0, 800)")
+        page.wait_for_timeout(3000)
 
         # wait for table
         page.wait_for_selector("table tbody tr", timeout=30000)
@@ -55,7 +76,7 @@ def scrape_holdings():
 
             first_row_text = rows[0].inner_text().strip() if rows else ""
             if first_row_text == prev_first_row and page_num > 1:
-                print("  Page content unchanged -- stopping.", file=sys.stderr)
+                print("  Page unchanged -- stopping.", file=sys.stderr)
                 break
             prev_first_row = first_row_text
 
@@ -77,41 +98,29 @@ def scrape_holdings():
                 if record["name"] or record["ticker"]:
                     records.append(record)
 
-            # Use Playwright locator which pierces Shadow DOM automatically
-            print("  Looking for next button with locator...", file=sys.stderr)
+            # wait up to 15 seconds for next button to become enabled
+            print("  Waiting for next button to become enabled...", file=sys.stderr)
             try:
-                # Playwright's locator API pierces Shadow DOM by default
-                next_locator = page.locator("div.next beacon-icon-button")
-                count = next_locator.count()
-                print("  Found {} beacon-icon-buttons in div.next".format(count), file=sys.stderr)
+                page.wait_for_function(
+                    """() => {
+                        var divNext = document.querySelector('div.next');
+                        if (!divNext) return false;
+                        var btn = divNext.querySelector('beacon-icon-button');
+                        if (!btn) return false;
+                        return btn.getAttribute('motion-state') !== 'disabled';
+                    }""",
+                    timeout=15000
+                )
+                print("  Next button is enabled!", file=sys.stderr)
 
-                if count > 0:
-                    motion_state = next_locator.get_attribute("motion-state")
-                    print("  motion-state: {}".format(motion_state), file=sys.stderr)
-
-                    if motion_state == "disabled":
-                        print("  Next button disabled -- done.", file=sys.stderr)
-                        break
-                    else:
-                        next_locator.click()
-                        print("  Clicked next button.", file=sys.stderr)
-                        page.wait_for_timeout(3000)
-                        page_num += 1
-                else:
-                    # fallback: try any beacon-icon-button with chevron_right
-                    all_beacons = page.locator("beacon-icon-button")
-                    total = all_beacons.count()
-                    print("  Total beacon-icon-buttons on page: {}".format(total), file=sys.stderr)
-                    for i in range(total):
-                        btn = all_beacons.nth(i)
-                        state = btn.get_attribute("motion-state")
-                        text = btn.inner_text().strip()
-                        print("    beacon[{}] state={} text={}".format(i, state, text[:50]), file=sys.stderr)
-                    print("  No next button found -- done.", file=sys.stderr)
-                    break
+                # click it
+                next_btn = page.locator("div.next beacon-icon-button")
+                next_btn.click()
+                page.wait_for_timeout(3000)
+                page_num += 1
 
             except Exception as e:
-                print("  Pagination error: {}".format(e), file=sys.stderr)
+                print("  Next button did not become enabled ({}). Done.".format(str(e)[:80]), file=sys.stderr)
                 break
 
             if page_num > 20:
