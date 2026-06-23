@@ -21,11 +21,7 @@ def scrape_holdings():
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-            ]
+            args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
         )
         context = browser.new_context(
             user_agent=(
@@ -36,35 +32,100 @@ def scrape_holdings():
             viewport={"width": 1920, "height": 1080},
             locale="en-US",
         )
-
-        # hide webdriver property
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        """)
+        context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });"
+        )
 
         page = context.new_page()
 
-        print("Opening page...", file=sys.stderr)
+        # Step 1: visit the homepage first to accept T&C
+        print("Visiting homepage to accept T&C...", file=sys.stderr)
+        page.goto("https://www.troweprice.com/financial-intermediary/us/en/home.html",
+                  wait_until="networkidle", timeout=90000)
+        page.wait_for_timeout(5000)
+
+        # look for and accept any T&C / cookie / audience confirmation dialog
+        accepted = False
+        selectors_to_try = [
+            "button:has-text('I Agree')",
+            "button:has-text('I Accept')",
+            "button:has-text('Accept')",
+            "button:has-text('Agree')",
+            "button:has-text('Confirm')",
+            "button:has-text('Continue')",
+            "button:has-text('Financial Advisor')",
+            "button:has-text('Advisor')",
+            "button:has-text('Intermediary')",
+            "[data-testid='accept-btn']",
+            ".accept-button",
+            ".terms-accept",
+        ]
+        for sel in selectors_to_try:
+            try:
+                btn = page.locator(sel).first
+                if btn.is_visible(timeout=2000):
+                    print("  Found dialog button: {}".format(sel), file=sys.stderr)
+                    btn.click()
+                    accepted = True
+                    page.wait_for_timeout(2000)
+                    break
+            except Exception:
+                pass
+
+        if not accepted:
+            print("  No T&C dialog found on homepage.", file=sys.stderr)
+
+        # print page text snippet to see what's visible
+        body_snippet = page.evaluate("() => document.body.innerText.substring(0, 300)")
+        print("  Homepage snippet: {}".format(body_snippet), file=sys.stderr)
+
+        # Step 2: now navigate to TCAF page
+        print("Navigating to TCAF page...", file=sys.stderr)
         page.goto(URL, wait_until="networkidle", timeout=90000)
         page.wait_for_timeout(8000)
 
-        # click Holdings tab
+        # accept any dialogs on this page too
+        for sel in selectors_to_try:
+            try:
+                btn = page.locator(sel).first
+                if btn.is_visible(timeout=1000):
+                    print("  Accepting dialog: {}".format(sel), file=sys.stderr)
+                    btn.click()
+                    page.wait_for_timeout(2000)
+                    break
+            except Exception:
+                pass
+
+        # Step 3: click Holdings tab
         print("Clicking Holdings tab...", file=sys.stderr)
         try:
             page.click("a[href='#holdings']", timeout=10000)
             page.wait_for_timeout(5000)
-            print("Holdings tab clicked.", file=sys.stderr)
         except Exception as e:
             print("Holdings tab error: {}".format(e), file=sys.stderr)
 
-        # scroll down to holdings section to trigger lazy loading
-        page.evaluate("window.scrollBy(0, 800)")
-        page.wait_for_timeout(3000)
+        # scroll to holdings to trigger lazy loading
+        page.evaluate("window.scrollBy(0, 600)")
+        page.wait_for_timeout(5000)
 
         # wait for table
         page.wait_for_selector("table tbody tr", timeout=30000)
         page.wait_for_timeout(3000)
 
+        # debug: how many rows and what does the next button look like
+        row_count = len(page.query_selector_all("table tbody tr"))
+        next_state = page.evaluate("""
+            () => {
+                var d = document.querySelector('div.next');
+                if (!d) return 'no div.next';
+                var b = d.querySelector('beacon-icon-button');
+                if (!b) return 'no beacon btn';
+                return b.getAttribute('motion-state');
+            }
+        """)
+        print("Rows: {}, next button state: {}".format(row_count, next_state), file=sys.stderr)
+
+        # Step 4: scrape all pages
         page_num = 1
         prev_first_row = None
 
@@ -72,8 +133,6 @@ def scrape_holdings():
             print("Scraping page {}...".format(page_num), file=sys.stderr)
 
             rows = page.query_selector_all("table tbody tr")
-            print("  Found {} rows".format(len(rows)), file=sys.stderr)
-
             first_row_text = rows[0].inner_text().strip() if rows else ""
             if first_row_text == prev_first_row and page_num > 1:
                 print("  Page unchanged -- stopping.", file=sys.stderr)
@@ -98,29 +157,25 @@ def scrape_holdings():
                 if record["name"] or record["ticker"]:
                     records.append(record)
 
-            # wait up to 15 seconds for next button to become enabled
-            print("  Waiting for next button to become enabled...", file=sys.stderr)
+            # wait for next button to become enabled
+            print("  Waiting for next button...", file=sys.stderr)
             try:
                 page.wait_for_function(
                     """() => {
-                        var divNext = document.querySelector('div.next');
-                        if (!divNext) return false;
-                        var btn = divNext.querySelector('beacon-icon-button');
-                        if (!btn) return false;
-                        return btn.getAttribute('motion-state') !== 'disabled';
+                        var d = document.querySelector('div.next');
+                        if (!d) return false;
+                        var b = d.querySelector('beacon-icon-button');
+                        if (!b) return false;
+                        return b.getAttribute('motion-state') !== 'disabled';
                     }""",
                     timeout=15000
                 )
-                print("  Next button is enabled!", file=sys.stderr)
-
-                # click it
-                next_btn = page.locator("div.next beacon-icon-button")
-                next_btn.click()
+                print("  Next enabled -- clicking.", file=sys.stderr)
+                page.locator("div.next beacon-icon-button").click()
                 page.wait_for_timeout(3000)
                 page_num += 1
-
             except Exception as e:
-                print("  Next button did not become enabled ({}). Done.".format(str(e)[:80]), file=sys.stderr)
+                print("  Next not enabled -- done. ({})".format(str(e)[:60]), file=sys.stderr)
                 break
 
             if page_num > 20:
