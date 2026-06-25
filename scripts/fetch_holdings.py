@@ -9,6 +9,19 @@ GRAPHQL_URL = "https://api.public.troweprice.com/ds-dada/graphql"
 API_KEY     = "dfalKOgR1TyFTzz9Uv35a7cUczNRrk1K"
 DATA_DIR    = os.path.join(os.path.dirname(__file__), "..", "data")
 
+ETFS = {
+    "TCAF": "CFX",
+    "TURF": "NRX",
+    "TIER": "IEX",
+    "TGLB": "GEX",
+    "TACN": "AIX",
+    "TACU": "AUX",
+    "TOUS": "INX",
+    "THEQ": "HEX",
+    "TGRT": "GRX",
+    "TMED": "HCX",
+}
+
 QUERY = """
 query getProduct($productRequest: DataRequest) {
   fetchData(req: $productRequest) {
@@ -42,7 +55,7 @@ def is_nyse_trading_day(d):
     return not schedule.empty
 
 
-def fetch_holdings(as_of_date):
+def fetch_holdings(product_code, as_of_date):
     payload = {
         "operationName": "getProduct",
         "variables": {
@@ -54,7 +67,7 @@ def fetch_holdings(as_of_date):
                     "language": "en"
                 },
                 "productRequest": {
-                    "productCode": "CFX",
+                    "productCode": product_code,
                     "historicalDates": {
                         "fullHoldings": [as_of_date]
                     }
@@ -84,61 +97,57 @@ def fetch_holdings(as_of_date):
     return resp.json()
 
 
-def parse_holdings(api_response, today_str):
+def parse_holdings(api_response):
     exhibits = (
         api_response
         .get("data", {})
         .get("fetchData", {})
         .get("fullHoldingsExhibit", [])
     )
-
     if not exhibits:
-        print("No fullHoldingsExhibit in response.", file=sys.stderr)
-        return [], None
+        return []
 
-    exhibit = exhibits[0]
-    available = exhibit.get("availableDates", [])
-    print("Available dates: {}".format(available[:5]), file=sys.stderr)
-
-    holdings = exhibit.get("holdings", [])
-    effective = exhibit.get("effectiveDate", today_str)
-    print("Effective date: {}, Holdings count: {}".format(effective, len(holdings)), file=sys.stderr)
-
+    holdings = exhibits[0].get("holdings", [])
     records = []
     for h in holdings:
         records.append({
-            "name":       h.get("name") or "",
-            "ticker":     h.get("tickerSymbol") or "",
-            "identifier": h.get("prioritizedIdentifier") or "",
-            "pct_of_fund":  round(h.get("percentageTotalNetAssets") or 0, 6),
-            "quantity":     h.get("shareQuantity"),
-            "market_value": h.get("marketValue"),
-            "investments":  h.get("investmentType") or "",
+            "name":           h.get("name") or "",
+            "ticker":         h.get("tickerSymbol") or "",
+            "identifier":     h.get("prioritizedIdentifier") or "",
+            "pct_of_fund":    round(h.get("percentageTotalNetAssets") or 0, 6),
+            "quantity":       h.get("shareQuantity"),
+            "market_value":   h.get("marketValue"),
+            "investments":    h.get("investmentType") or "",
             "options_strike": h.get("strikePrice"),
-            "sector":       h.get("sectorName") or "",
+            "sector":         h.get("sectorName") or "",
         })
+    return records
 
-    return records, effective
+
+def get_etf_data_dir(ticker):
+    d = os.path.join(DATA_DIR, ticker)
+    os.makedirs(d, exist_ok=True)
+    return d
 
 
-def save_snapshot(records, today_str):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    path = os.path.join(DATA_DIR, "{}.json".format(today_str))
-    payload = {"date": today_str, "holdings": records}
+def save_snapshot(records, today_str, ticker):
+    data_dir = get_etf_data_dir(ticker)
+    path = os.path.join(data_dir, "{}.json".format(today_str))
+    payload = {"date": today_str, "ticker": ticker, "holdings": records}
     with open(path, "w") as f:
         json.dump(payload, f, indent=2)
-    with open(os.path.join(DATA_DIR, "latest.json"), "w") as f:
+    with open(os.path.join(data_dir, "latest.json"), "w") as f:
         json.dump(payload, f, indent=2)
-    print("Saved {} holdings to {}".format(len(records), path), file=sys.stderr)
 
 
-def find_prior_snapshot(today_str):
+def find_prior_snapshot(today_str, ticker):
+    data_dir = get_etf_data_dir(ticker)
     files = sorted(
-        f for f in os.listdir(DATA_DIR)
+        f for f in os.listdir(data_dir)
         if f.endswith(".json") and f not in ("latest.json", "diff.json", "history.json")
     )
     prior = [f for f in files if f.replace(".json", "") < today_str]
-    return os.path.join(DATA_DIR, prior[-1]) if prior else None
+    return os.path.join(data_dir, prior[-1]) if prior else None
 
 
 def compute_diff(today_records, prior_records, today_str, prior_date_str):
@@ -189,11 +198,13 @@ def compute_diff(today_records, prior_records, today_str, prior_date_str):
                 "pct_of_fund_prior": p["pct_of_fund"] or 0,
                 "pct_of_fund_change": None, "market_value_today": None,
             })
-    return {"date": today_str, "prior_date": prior_date_str, "diff": rows}
+    return {"date": today_str, "ticker": today_map and list(today_map.values())[0].get("ticker", "") or "",
+            "prior_date": prior_date_str, "diff": rows}
 
 
-def append_history(today_str, diff):
-    history_path = os.path.join(DATA_DIR, "history.json")
+def append_history(today_str, diff, ticker):
+    data_dir = get_etf_data_dir(ticker)
+    history_path = os.path.join(data_dir, "history.json")
     history = []
     if os.path.exists(history_path):
         with open(history_path) as f:
@@ -206,6 +217,41 @@ def append_history(today_str, diff):
         json.dump(history, f, indent=2)
 
 
+def process_etf(ticker, product_code, today_str):
+    print("Fetching {} ({})...".format(ticker, product_code), file=sys.stderr)
+    try:
+        api_response = fetch_holdings(product_code, today_str)
+        records = parse_holdings(api_response)
+        if not records:
+            print("  No holdings returned for {}.".format(ticker), file=sys.stderr)
+            return
+        print("  {} holdings found.".format(len(records)), file=sys.stderr)
+        save_snapshot(records, today_str, ticker)
+
+        prior_path = find_prior_snapshot(today_str, ticker)
+        if not prior_path:
+            diff = {"date": today_str, "ticker": ticker, "prior_date": None, "diff": []}
+        else:
+            with open(prior_path) as f:
+                prior_data = json.load(f)
+            diff = compute_diff(records, prior_data["holdings"], today_str, prior_data["date"])
+
+        data_dir = get_etf_data_dir(ticker)
+        with open(os.path.join(data_dir, "diff.json"), "w") as f:
+            json.dump(diff, f, indent=2)
+
+        append_history(today_str, diff, ticker)
+
+        changed = sum(1 for r in diff["diff"] if r["status"] == "changed")
+        added   = sum(1 for r in diff["diff"] if r["status"] == "added")
+        removed = sum(1 for r in diff["diff"] if r["status"] == "removed")
+        print("  Done -- {} changed | {} added | {} removed".format(
+            changed, added, removed), file=sys.stderr)
+
+    except Exception as e:
+        print("  ERROR for {}: {}".format(ticker, e), file=sys.stderr)
+
+
 def main():
     today_str = date.today().isoformat()
     today     = date.today()
@@ -214,36 +260,10 @@ def main():
         print("{} is not a NYSE trading day -- skipping.".format(today_str), file=sys.stderr)
         sys.exit(0)
 
-    print("Fetching TCAF holdings for {}...".format(today_str), file=sys.stderr)
-    api_response = fetch_holdings(today_str)
-    records, effective = parse_holdings(api_response, today_str)
-
-    if not records:
-        print("No holdings returned -- exiting.", file=sys.stderr)
-        sys.exit(1)
-
-    print("Found {} holdings.".format(len(records)), file=sys.stderr)
-    save_snapshot(records, today_str)
-
-    prior_path = find_prior_snapshot(today_str)
-    if not prior_path:
-        print("No prior snapshot -- skipping diff.", file=sys.stderr)
-        diff = {"date": today_str, "prior_date": None, "diff": []}
-    else:
-        with open(prior_path) as f:
-            prior_data = json.load(f)
-        diff = compute_diff(records, prior_data["holdings"], today_str, prior_data["date"])
-
-    with open(os.path.join(DATA_DIR, "diff.json"), "w") as f:
-        json.dump(diff, f, indent=2)
-
-    append_history(today_str, diff)
-
-    changed = sum(1 for r in diff["diff"] if r["status"] == "changed")
-    added   = sum(1 for r in diff["diff"] if r["status"] == "added")
-    removed = sum(1 for r in diff["diff"] if r["status"] == "removed")
-    print("Done -- {} holdings | {} changed | {} added | {} removed".format(
-        len(records), changed, added, removed), file=sys.stderr)
+    print("Running for {}...".format(today_str), file=sys.stderr)
+    for ticker, product_code in ETFS.items():
+        process_etf(ticker, product_code, today_str)
+    print("All done.", file=sys.stderr)
 
 
 if __name__ == "__main__":
