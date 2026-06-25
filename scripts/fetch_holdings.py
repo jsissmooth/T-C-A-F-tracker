@@ -198,8 +198,7 @@ def compute_diff(today_records, prior_records, today_str, prior_date_str):
                 "pct_of_fund_prior": p["pct_of_fund"] or 0,
                 "pct_of_fund_change": None, "market_value_today": None,
             })
-    return {"date": today_str, "ticker": today_map and list(today_map.values())[0].get("ticker", "") or "",
-            "prior_date": prior_date_str, "diff": rows}
+    return {"date": today_str, "ticker": ticker, "prior_date": prior_date_str, "diff": rows}
 
 
 def append_history(today_str, diff, ticker):
@@ -230,7 +229,24 @@ def process_etf(ticker, product_code, today_str):
 
         prior_path = find_prior_snapshot(today_str, ticker)
         if not prior_path:
-            diff = {"date": today_str, "ticker": ticker, "prior_date": None, "diff": []}
+            # no prior day -- show all holdings as unchanged so dashboard displays them
+            diff_rows = []
+            for r in records:
+                diff_rows.append({
+                    "ticker":              r.get("ticker") or "",
+                    "name":                r.get("name") or "",
+                    "identifier":          r.get("identifier") or "",
+                    "sector":              r.get("sector") or "",
+                    "status":              "unchanged",
+                    "quantity_today":      r["quantity"] or 0,
+                    "quantity_prior":      r["quantity"] or 0,
+                    "quantity_pct_change": 0,
+                    "pct_of_fund_today":   r["pct_of_fund"] or 0,
+                    "pct_of_fund_prior":   r["pct_of_fund"] or 0,
+                    "pct_of_fund_change":  0,
+                    "market_value_today":  r.get("market_value"),
+                })
+            diff = {"date": today_str, "ticker": ticker, "prior_date": None, "diff": diff_rows}
         else:
             with open(prior_path) as f:
                 prior_data = json.load(f)
