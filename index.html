@@ -42,15 +42,15 @@
     }
     .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-    main { padding: 28px 36px; max-width: 1600px; margin: 0 auto; }
+    main { padding: 28px 36px; max-width: 1800px; margin: 0 auto; }
 
     .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
     .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px; }
     .stat-label { font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
     .stat-value { font-family: var(--mono); font-size: 28px; font-weight: 600; color: #fff; line-height: 1; }
-    .stat-value.green { color: var(--green); }
-    .stat-value.red   { color: var(--red); }
-    .stat-value.yellow{ color: var(--yellow); }
+    .stat-value.green  { color: var(--green); }
+    .stat-value.red    { color: var(--red); }
+    .stat-value.yellow { color: var(--yellow); }
 
     .toolbar { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
     .filter-group { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
@@ -92,8 +92,15 @@
     tbody tr.row-removed  { background: var(--red-bg); }
     tbody tr.row-changed  { background: var(--yellow-bg); }
     td { padding: 10px 14px; font-family: var(--mono); white-space: nowrap; }
-    td.name-cell { color: var(--text); font-size: 11px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; font-family: var(--sans); }
     td.ticker-cell { font-weight: 600; font-size: 13px; color: #fff; }
+    td.name-cell {
+      color: var(--text); font-size: 11px; max-width: 220px;
+      overflow: hidden; text-overflow: ellipsis; font-family: var(--sans);
+    }
+    td.sector-cell {
+      font-size: 11px; color: var(--muted); max-width: 140px;
+      overflow: hidden; text-overflow: ellipsis;
+    }
     td.num { text-align: right; }
     .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; }
     .badge-added     { background: var(--green-bg);  color: var(--green);  border: 1px solid rgba(34,197,94,0.2); }
@@ -106,7 +113,10 @@
     .na { color: var(--muted); font-size: 10px; }
     .bar-wrap { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
     .mini-bar { display: inline-block; height: 8px; min-width: 2px; border-radius: 2px; }
-    .state-msg { text-align: center; padding: 80px 20px; color: var(--muted); font-family: var(--mono); font-size: 13px; }
+    .state-msg {
+      text-align: center; padding: 80px 20px; color: var(--muted);
+      font-family: var(--mono); font-size: 13px;
+    }
     .spinner {
       display: inline-block; width: 20px; height: 20px;
       border: 2px solid var(--border); border-top-color: var(--accent);
@@ -114,8 +124,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 900px) {
-      header { padding: 16px 18px; }
-      main   { padding: 18px; }
+      header, main { padding-left: 16px; padding-right: 16px; }
       .stats { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
@@ -125,11 +134,11 @@
 <header>
   <div class="logo">
     <span class="logo-ticker">TCAF</span>
-    <span class="logo-name">T. Rowe Price Capital Appreciation Equity ETF · Holdings Tracker</span>
+    <span class="logo-name">T. Rowe Price Capital Appreciation Equity ETF &middot; Holdings Tracker</span>
   </div>
   <div class="header-right">
     <span class="date-badge" id="headerDate">--</span>
-    <button class="refresh-btn" onclick="loadData()">↻ REFRESH</button>
+    <button class="refresh-btn" onclick="loadData()">&#8635; REFRESH</button>
   </div>
 </header>
 
@@ -149,10 +158,10 @@
       <button class="filter-btn" onclick="setFilter('removed',this)">REMOVED</button>
       <button class="filter-btn" onclick="setFilter('unchanged',this)">UNCHANGED</button>
     </div>
-    <input class="search-input" id="searchInput" placeholder="Search name or ticker..." oninput="renderTable()" />
+    <input class="search-input" id="searchInput" placeholder="Search name, ticker, sector..." oninput="renderTable()" />
     <select class="sort-select" id="sortSelect" onchange="renderTable()">
-      <option value="name_asc">Name A to Z</option>
       <option value="ticker_asc">Ticker A to Z</option>
+      <option value="name_asc">Name A to Z</option>
       <option value="qty_chg_desc">Quantity Change High to Low</option>
       <option value="qty_chg_asc">Quantity Change Low to High</option>
       <option value="weight_desc">Weight High to Low</option>
@@ -175,7 +184,10 @@
       '<div class="state-msg"><div class="spinner"></div><br>Loading holdings data...</div>';
 
     fetch("data/diff.json?t=" + Date.now())
-      .then(function(r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
       .then(function(data) {
         document.getElementById("headerDate").textContent = data.date || "--";
 
@@ -222,22 +234,27 @@
     var rows = allRows.filter(function(r) {
       if (activeFilter !== "all" && r.status !== activeFilter) return false;
       if (query) {
-        var inName   = r.name   && r.name.toUpperCase().indexOf(query)   !== -1;
         var inTicker = r.ticker && r.ticker.toUpperCase().indexOf(query) !== -1;
-        if (!inName && !inTicker) return false;
+        var inName   = r.name   && r.name.toUpperCase().indexOf(query)   !== -1;
+        var inSector = r.sector && r.sector.toUpperCase().indexOf(query) !== -1;
+        if (!inTicker && !inName && !inSector) return false;
       }
       return true;
     });
 
-    var statusOrder = { added: 0, removed: 1, changed: 2, unchanged: 3 };
+    var so = { added: 0, removed: 1, changed: 2, unchanged: 3 };
     rows.sort(function(a, b) {
       switch (sort) {
-        case "name_asc":      return (a.name || "").localeCompare(b.name || "");
         case "ticker_asc":    return (a.ticker || "").localeCompare(b.ticker || "");
-        case "qty_chg_desc":  return (b.quantity_pct_change != null ? b.quantity_pct_change : -1e9) - (a.quantity_pct_change != null ? a.quantity_pct_change : -1e9);
-        case "qty_chg_asc":   return (a.quantity_pct_change != null ? a.quantity_pct_change :  1e9) - (b.quantity_pct_change != null ? b.quantity_pct_change :  1e9);
+        case "name_asc":      return (a.name   || "").localeCompare(b.name   || "");
+        case "qty_chg_desc":
+          return (b.quantity_pct_change != null ? b.quantity_pct_change : -1e9) -
+                 (a.quantity_pct_change != null ? a.quantity_pct_change : -1e9);
+        case "qty_chg_asc":
+          return (a.quantity_pct_change != null ? a.quantity_pct_change :  1e9) -
+                 (b.quantity_pct_change != null ? b.quantity_pct_change :  1e9);
         case "weight_desc":   return (b.pct_of_fund_today || 0) - (a.pct_of_fund_today || 0);
-        case "status":        return (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9);
+        case "status":        return (so[a.status] || 9) - (so[b.status] || 9);
         default: return 0;
       }
     });
@@ -246,8 +263,8 @@
 
   function fmtQty(v) {
     if (v == null) return '<span class="na">--</span>';
-    if (v >= 1000000) return (v / 1000000).toFixed(3) + "M";
-    if (v >= 1000)    return (v / 1000).toFixed(2) + "K";
+    if (v >= 1e6)  return (v / 1e6).toFixed(3) + "M";
+    if (v >= 1000) return (v / 1000).toFixed(2) + "K";
     return v.toFixed(0);
   }
 
@@ -258,9 +275,9 @@
 
   function fmtMV(v) {
     if (v == null) return '<span class="na">--</span>';
-    if (v >= 1000000000) return "$" + (v / 1000000000).toFixed(2) + "B";
-    if (v >= 1000000)    return "$" + (v / 1000000).toFixed(2) + "M";
-    if (v >= 1000)       return "$" + (v / 1000).toFixed(2) + "K";
+    if (v >= 1e9)  return "$" + (v / 1e9).toFixed(2) + "B";
+    if (v >= 1e6)  return "$" + (v / 1e6).toFixed(2) + "M";
+    if (v >= 1000) return "$" + (v / 1000).toFixed(2) + "K";
     return "$" + v.toFixed(0);
   }
 
@@ -269,21 +286,20 @@
     var cls  = v > 0 ? "chg-pos" : v < 0 ? "chg-neg" : "chg-zero";
     var sign = v > 0 ? "+" : "";
     var text = isPercent ? sign + v.toFixed(4) + "pp" : sign + v.toFixed(2) + "%";
-    var barMax   = isPercent ? 2 : 20;
-    var barW     = Math.min(Math.abs(v) / barMax * 36, 36);
-    var barColor = v > 0 ? "var(--green)" : v < 0 ? "var(--red)" : "var(--muted)";
+    var bw   = Math.min(Math.abs(v) / (isPercent ? 2 : 20) * 36, 36);
+    var bc   = v > 0 ? "var(--green)" : v < 0 ? "var(--red)" : "var(--muted)";
     return '<div class="bar-wrap"><span class="' + cls + '">' + text + '</span>' +
-           '<span class="mini-bar" style="width:' + barW + 'px;background:' + barColor + ';opacity:0.5;"></span></div>';
+           '<span class="mini-bar" style="width:' + bw + 'px;background:' + bc + ';opacity:0.5"></span></div>';
   }
 
-  function badgeHtml(status) {
-    var labels = { added: "+ ADDED", removed: "- REMOVED", changed: "~ CHANGED", unchanged: ". same" };
-    return '<span class="badge badge-' + status + '">' + (labels[status] || status) + '</span>';
+  function badgeHtml(s) {
+    var L = { added: "+ ADDED", removed: "- REMOVED", changed: "~ CHANGED", unchanged: ". same" };
+    return '<span class="badge badge-' + s + '">' + (L[s] || s) + '</span>';
   }
 
   function renderTable() {
     var rows = getSortedFiltered();
-    if (rows.length === 0) {
+    if (!rows.length) {
       document.getElementById("tableWrap").innerHTML =
         '<div class="state-msg">No holdings match the current filter.</div>';
       return;
@@ -292,8 +308,9 @@
     var tbody = "";
     rows.forEach(function(r) {
       tbody += '<tr class="row-' + r.status + '">';
-      tbody += '<td class="name-cell" title="' + (r.name || "") + '">' + (r.name || '<span class="na">--</span>') + '</td>';
       tbody += '<td class="ticker-cell">' + (r.ticker || '<span class="na">--</span>') + '</td>';
+      tbody += '<td class="name-cell" title="' + (r.name || "") + '">' + (r.name || '<span class="na">--</span>') + '</td>';
+      tbody += '<td class="sector-cell" title="' + (r.sector || "") + '">' + (r.sector || '<span class="na">--</span>') + '</td>';
       tbody += '<td>' + badgeHtml(r.status) + '</td>';
       tbody += '<td class="num">' + fmtQty(r.quantity_prior) + '</td>';
       tbody += '<td class="num">' + fmtQty(r.quantity_today) + '</td>';
@@ -307,13 +324,13 @@
 
     document.getElementById("tableWrap").innerHTML =
       '<table><thead><tr>' +
-      '<th>Name</th><th>Ticker</th><th>Status</th>' +
-      '<th class="num">Quantity (Prior)</th>' +
-      '<th class="num">Quantity (Today)</th>' +
-      '<th class="num">Quantity Delta %</th>' +
-      '<th class="num">% of Fund (Prior)</th>' +
-      '<th class="num">% of Fund (Today)</th>' +
-      '<th class="num">% of Fund Delta</th>' +
+      '<th>Ticker</th><th>Name</th><th>Sector</th><th>Status</th>' +
+      '<th class="num">Qty (Prior)</th>' +
+      '<th class="num">Qty (Today)</th>' +
+      '<th class="num">Qty Delta %</th>' +
+      '<th class="num">Weight (Prior)</th>' +
+      '<th class="num">Weight (Today)</th>' +
+      '<th class="num">Weight Delta</th>' +
       '<th class="num">Market Value</th>' +
       '</tr></thead><tbody>' + tbody + '</tbody></table>';
   }
