@@ -34,7 +34,7 @@ def scrape_holdings():
         page.goto(URL, wait_until="networkidle", timeout=90000)
         page.wait_for_timeout(8000)
 
-        # click Financial Advisor if visible
+        # click Financial Advisor
         try:
             btn = page.get_by_role("button", name="Financial Advisor").first
             if btn.is_visible(timeout=2000):
@@ -49,65 +49,50 @@ def scrape_holdings():
         page.click("a[href='#holdings']", timeout=10000)
         page.wait_for_timeout(10000)
 
-        # select today's date from the holdings date picker
-        # the 3rd select (index 2) is the daily holdings date picker
-        print("Selecting today's date in holdings picker...", file=sys.stderr)
+        # select today's date from the 3rd select (daily holdings picker)
+        print("Selecting today's date...", file=sys.stderr)
         try:
             selects = page.locator("select").all()
-            print("  Found {} selects".format(len(selects)), file=sys.stderr)
             if len(selects) >= 3:
-                holdings_select = selects[2]
-                opts = holdings_select.locator("option").all_text_contents()
-                print("  First option: {}".format(opts[0].strip() if opts else "none"), file=sys.stderr)
-                holdings_select.select_option(index=0)
-                print("  Selected first option (today).", file=sys.stderr)
-                page.wait_for_timeout(12000)
+                selects[2].select_option(index=0)
+                print("  Date selected.", file=sys.stderr)
+                page.wait_for_timeout(5000)
         except Exception as e:
             print("  Date select error: {}".format(e), file=sys.stderr)
 
-        # scroll to Table 3 (the holdings table)
+        # scroll to Table 3 and wait for it to fully load
         print("Scrolling to holdings table...", file=sys.stderr)
         try:
             tables = page.locator("table").all()
-            print("  Tables visible: {}".format(len(tables)), file=sys.stderr)
             if len(tables) >= 4:
                 tables[3].scroll_into_view_if_needed()
-                page.wait_for_timeout(5000)
+                page.wait_for_timeout(10000)
         except Exception as e:
             print("  Scroll error: {}".format(e), file=sys.stderr)
 
-        # check pagination
+        # check next button state
         next_loc = page.locator("div.next beacon-icon-button")
         n = next_loc.count()
         state = next_loc.get_attribute("motion-state") if n > 0 else "not found"
-        print("Next button after scroll: count={} state={}".format(n, state), file=sys.stderr)
+        print("Next button: count={} state={}".format(n, state), file=sys.stderr)
 
-        # wait up to 15s for next button to become enabled
-        if n > 0 and state == "disabled":
-            print("Waiting for next button to become enabled...", file=sys.stderr)
-            try:
-                page.wait_for_function(
-                    """() => {
-                        var d = document.querySelector('div.next');
-                        if (!d) return false;
-                        var b = d.querySelector('beacon-icon-button');
-                        if (!b) return false;
-                        return b.getAttribute('motion-state') !== 'disabled';
-                    }""",
-                    timeout=15000
-                )
-                print("  Next button enabled!", file=sys.stderr)
-            except Exception:
-                print("  Next button stayed disabled.", file=sys.stderr)
+        # print full inner_text of Table 3 for debugging
+        print("=== Table 3 inner_text ===", file=sys.stderr)
+        try:
+            tables = page.locator("table").all()
+            if len(tables) >= 4:
+                txt = tables[3].inner_text()
+                print(txt[:2000], file=sys.stderr)
+        except Exception as e:
+            print("Error: {}".format(e), file=sys.stderr)
 
-        # scrape all pages from Table 3
+        # scrape all pages using inner_text row splitting
         page_num = 1
         prev_first_row = None
 
         while True:
             print("Scraping page {}...".format(page_num), file=sys.stderr)
 
-            # always use Table 3 (index 3)
             tables = page.locator("table").all()
             if len(tables) < 4:
                 print("  Not enough tables -- done.", file=sys.stderr)
@@ -115,20 +100,12 @@ def scrape_holdings():
 
             holdings_table = tables[3]
             rows = holdings_table.locator("tbody tr").all()
-            print("  {} rows in Table 3".format(len(rows)), file=sys.stderr)
+            print("  {} rows".format(len(rows)), file=sys.stderr)
 
             if not rows:
-                print("  No rows -- done.", file=sys.stderr)
                 break
 
-            # print first row for sanity check
-            try:
-                first_cells = rows[0].locator("td").all_text_contents()
-                print("  First row: {}".format([c.strip()[:30] for c in first_cells[:4]]), file=sys.stderr)
-            except Exception:
-                pass
-
-            first_row_text = rows[0].text_content().strip() if rows else ""
+            first_row_text = rows[0].inner_text().strip()
             if first_row_text == prev_first_row and page_num > 1:
                 print("  Unchanged -- done.", file=sys.stderr)
                 break
@@ -136,27 +113,36 @@ def scrape_holdings():
 
             for row in rows:
                 try:
-                    cells = row.locator("td").all_text_contents()
-                    texts = [c.strip() for c in cells]
-                    if len(texts) < 3:
+                    # use inner_text() and split by tab -- pierces shadow DOM
+                    row_text = row.inner_text()
+                    cells = [c.strip() for c in row_text.split("\t")]
+                    cells = [c for c in cells if c]  # remove empty strings
+
+                    print("  Row cells: {}".format([c[:25] for c in cells[:8]]), file=sys.stderr)
+
+                    if len(cells) < 2:
                         continue
-                    # name is index 0, skip rows that are just numbers/empty
-                    name = texts[0]
-                    if not name or name.replace(".", "").replace("-", "").replace("%", "").replace(",", "").replace(" ", "").isnumeric():
-                        continue
+
+                    # columns: Name, % of fund, Ticker, Identifier, Investments,
+                    #          Options strike, Quantity, Market value
                     record = {
-                        "name":           texts[0] if len(texts) > 0 else "",
-                        "pct_of_fund":    texts[1] if len(texts) > 1 else "",
-                        "ticker":         texts[2] if len(texts) > 2 else "",
-                        "identifier":     texts[3] if len(texts) > 3 else "",
-                        "investments":    texts[4] if len(texts) > 4 else "",
-                        "options_strike": texts[5] if len(texts) > 5 else "",
-                        "quantity":       texts[6] if len(texts) > 6 else "",
-                        "market_value":   texts[7] if len(texts) > 7 else "",
+                        "name":           cells[0] if len(cells) > 0 else "",
+                        "pct_of_fund":    cells[1] if len(cells) > 1 else "",
+                        "ticker":         cells[2] if len(cells) > 2 else "",
+                        "identifier":     cells[3] if len(cells) > 3 else "",
+                        "investments":    cells[4] if len(cells) > 4 else "",
+                        "options_strike": cells[5] if len(cells) > 5 else "",
+                        "quantity":       cells[6] if len(cells) > 6 else "",
+                        "market_value":   cells[7] if len(cells) > 7 else "",
                     }
+
+                    # skip rows with no name or that are clearly header/empty
+                    if not record["name"]:
+                        continue
+
                     records.append(record)
-                except Exception:
-                    pass
+                except Exception as e:
+                    print("  Row error: {}".format(e), file=sys.stderr)
 
             # check next button
             next_loc = page.locator("div.next beacon-icon-button")
