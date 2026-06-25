@@ -21,10 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests pandas-market-calendars playwright && playwright install chromium && playwright install-deps chromium
-
-      - name: Discover product codes (run once)
-        run: python scripts/discover_codes.py
+        run: pip install requests pandas-market-calendars
 
       - name: Run holdings script
         run: python scripts/fetch_holdings.py
