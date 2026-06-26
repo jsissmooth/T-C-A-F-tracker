@@ -421,7 +421,7 @@
       "pct_of_fund_today": 1.298017,
       "pct_of_fund_prior": 1.305736,
       "pct_of_fund_change": -0.0077,
-      "market_value_today": 93695680
+      "market_value_today": 93695680.0
     },
     {
       "ticker": "",
@@ -995,7 +995,7 @@
       "pct_of_fund_today": 0.202782,
       "pct_of_fund_prior": 0.203059,
       "pct_of_fund_change": -0.0003,
-      "market_value_today": 14637560
+      "market_value_today": 14637560.0
     },
     {
       "ticker": "RVTY",

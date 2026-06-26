@@ -173,7 +173,7 @@
       "identifier": "760759100",
       "pct_of_fund": 0.202782,
       "quantity": 68560.0,
-      "market_value": 14637560,
+      "market_value": 14637560.0,
       "investments": "LT",
       "options_strike": 0.0,
       "sector": ""
@@ -613,7 +613,7 @@
       "identifier": "23282W605",
       "pct_of_fund": 1.298017,
       "quantity": 1159600.0,
-      "market_value": 93695680,
+      "market_value": 93695680.0,
       "investments": "LT",
       "options_strike": 0.0,
       "sector": ""
