@@ -929,7 +929,7 @@
     },
     {
       "ticker": "ARGX",
-      "name": "ARGENX SE  ADR ADR",
+      "name": "ARGENX SE   ADR ADR",
       "identifier": "04016X101",
       "sector": "",
       "status": "unchanged",
@@ -1328,10 +1328,10 @@
       "quantity_today": 0,
       "quantity_prior": 0,
       "quantity_pct_change": 0,
-      "pct_of_fund_today": 0.439456,
+      "pct_of_fund_today": 0.413549,
       "pct_of_fund_prior": 0.443279,
-      "pct_of_fund_change": -0.0038,
-      "market_value_today": 6625790.628
+      "pct_of_fund_change": -0.0297,
+      "market_value_today": 6235170.908
     },
     {
       "ticker": "D05",
@@ -1829,13 +1829,13 @@
       "identifier": "999JPYZ94",
       "sector": "",
       "status": "changed",
-      "quantity_today": 186659371,
+      "quantity_today": 249847970.0,
       "quantity_prior": 175135231,
-      "quantity_pct_change": 6.5801,
-      "pct_of_fund_today": 0.076532,
+      "quantity_pct_change": 42.66,
+      "pct_of_fund_today": 0.10244,
       "pct_of_fund_prior": 0.071584,
-      "pct_of_fund_change": 0.0049,
-      "market_value_today": 1153892.2
+      "pct_of_fund_change": 0.0309,
+      "market_value_today": 1544511.92
     },
     {
       "ticker": "JMT",

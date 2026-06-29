@@ -2756,10 +2756,10 @@
       "quantity_today": 0,
       "quantity_prior": 0,
       "quantity_pct_change": 0,
-      "pct_of_fund_today": 0.323137,
+      "pct_of_fund_today": 0.300389,
       "pct_of_fund_prior": 0.33441,
-      "pct_of_fund_change": -0.0113,
-      "market_value_today": 97303.89199999999
+      "pct_of_fund_change": -0.034,
+      "market_value_today": 90453.95199999999
     },
     {
       "ticker": "D05",
@@ -3775,13 +3775,13 @@
       "identifier": "999JPYZ94",
       "sector": "",
       "status": "changed",
-      "quantity_today": 2400214.0,
+      "quantity_today": 3508294.0,
       "quantity_prior": 2105464.0,
-      "quantity_pct_change": 13.9993,
-      "pct_of_fund_today": 0.049274,
+      "quantity_pct_change": 66.6281,
+      "pct_of_fund_today": 0.072023,
       "pct_of_fund_prior": 0.042891,
-      "pct_of_fund_change": 0.0064,
-      "market_value_today": 14837.66
+      "pct_of_fund_change": 0.0291,
+      "market_value_today": 21687.6
     },
     {
       "ticker": "",

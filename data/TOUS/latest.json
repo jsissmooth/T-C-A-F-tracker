@@ -83,9 +83,9 @@
       "name": "JAPANESE YEN",
       "ticker": "",
       "identifier": "999JPYZ94",
-      "pct_of_fund": 0.076532,
-      "quantity": 186659371,
-      "market_value": 1153892.2,
+      "pct_of_fund": 0.10244,
+      "quantity": 249847970.0,
+      "market_value": 1544511.92,
       "investments": "",
       "options_strike": 0.0,
       "sector": ""
@@ -1686,7 +1686,7 @@
       "sector": ""
     },
     {
-      "name": "ARGENX SE  ADR ADR",
+      "name": "ARGENX SE   ADR ADR",
       "ticker": "ARGX",
       "identifier": "04016X101",
       "pct_of_fund": 0.41631,
@@ -2173,9 +2173,9 @@
       "name": "Cash/Cash equivalent USD",
       "ticker": "",
       "identifier": "",
-      "pct_of_fund": 0.439456,
+      "pct_of_fund": 0.413549,
       "quantity": 0.0,
-      "market_value": 6625790.628,
+      "market_value": 6235170.908,
       "investments": "",
       "options_strike": 0.0,
       "sector": ""

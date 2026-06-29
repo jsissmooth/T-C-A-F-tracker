@@ -3190,10 +3190,10 @@
       "quantity_today": 0,
       "quantity_prior": 0,
       "quantity_pct_change": 0,
-      "pct_of_fund_today": 0.204422,
+      "pct_of_fund_today": 0.183859,
       "pct_of_fund_prior": 0.207774,
-      "pct_of_fund_change": -0.0034,
-      "market_value_today": 42914.149000000005
+      "pct_of_fund_change": -0.0239,
+      "market_value_today": 38597.33900000001
     },
     {
       "ticker": "D05",
@@ -4461,13 +4461,13 @@
       "identifier": "999JPYZ94",
       "sector": "",
       "status": "changed",
-      "quantity_today": 2458774.0,
+      "quantity_today": 3157084.0,
       "quantity_prior": 1936209.0,
-      "quantity_pct_change": 26.9891,
-      "pct_of_fund_today": 0.072404,
+      "quantity_pct_change": 63.0549,
+      "pct_of_fund_today": 0.092967,
       "pct_of_fund_prior": 0.056807,
-      "pct_of_fund_change": 0.0156,
-      "market_value_today": 15199.67
+      "pct_of_fund_change": 0.0362,
+      "market_value_today": 19516.48
     },
     {
       "ticker": "JMT",
